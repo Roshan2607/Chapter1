@@ -1,0 +1,172 @@
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;700;800;900&family=Albert+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Lora:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Neo-Brutalism Design System ────────────────────────────── */
+:root {
+  --neo-bg:        #FFFDF5;
+  --neo-black:     #000000;
+  --neo-accent:    #FF6B6B;
+  --neo-secondary: #FFD93D;
+  --neo-muted:     #C4B5FD;
+  --neo-white:     #FFFFFF;
+  --neo-green:     #AFFFCB;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Albert Sans', sans-serif;
+  background: var(--neo-bg);
+  color: #000;
+  font-weight: 700;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* ─── Component layer (supports pseudo-classes) ─────────────── */
+@layer components {
+  /* Push-down button */
+  .neo-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: 'Albert Sans', sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: transform 80ms linear, box-shadow 80ms linear;
+    border: 4px solid #000;
+    user-select: none;
+  }
+  .neo-btn:not(:disabled):hover  { transform: translate(-2px, -2px); }
+  .neo-btn:not(:disabled):active { transform: translate(4px, 4px); box-shadow: none !important; }
+  .neo-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* Lift card */
+  .neo-card {
+    border: 4px solid #000;
+    transition: transform 200ms ease-out, box-shadow 200ms ease-out;
+  }
+  .neo-card-lift:hover {
+    transform: translate(-4px, -4px);
+    box-shadow: 12px 12px 0px 0px #000 !important;
+  }
+
+  /* Flat bordered input (focus turns yellow) */
+  .neo-input {
+    border: 4px solid #000;
+    background: #fff;
+    font-family: 'Albert Sans', sans-serif;
+    font-weight: 700;
+    outline: none;
+    transition: background 80ms linear, box-shadow 80ms linear;
+    width: 100%;
+  }
+  .neo-input::placeholder { color: rgba(0,0,0,0.3); font-weight: 500; letter-spacing: 0.02em; }
+  .neo-input:focus { background: var(--neo-secondary); box-shadow: 4px 4px 0px 0px #000; }
+  .neo-input:disabled { opacity: 0.5; }
+
+  /* Badge / tag */
+  .neo-badge {
+    display: inline-block;
+    background: var(--neo-secondary);
+    border: 3px solid #000;
+    box-shadow: 3px 3px 0 0 #000;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 11px;
+    padding: 3px 10px;
+    font-family: 'Albert Sans', sans-serif;
+  }
+}
+
+/* ─── Utility layer ──────────────────────────────────────────── */
+@layer utilities {
+  /* Hard shadows */
+  .neo-shadow-sm  { box-shadow: 4px 4px 0px 0px #000; }
+  .neo-shadow     { box-shadow: 8px 8px 0px 0px #000; }
+  .neo-shadow-lg  { box-shadow: 12px 12px 0px 0px #000; }
+  .neo-shadow-xl  { box-shadow: 16px 16px 0px 0px #000; }
+  .neo-shadow-inv { box-shadow: 8px 8px 0px 0px #FFD93D; }
+
+  /* Text stroke */
+  .text-stroke    { -webkit-text-stroke: 3px #000; color: transparent; }
+  .text-stroke-2  { -webkit-text-stroke: 2px #000; color: transparent; }
+  .text-stroke-sm { -webkit-text-stroke: 1.5px #000; color: transparent; }
+
+  /* Backgrounds */
+  .bg-halftone {
+    background-image: radial-gradient(#000 1.5px, transparent 1.5px);
+    background-size: 20px 20px;
+  }
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .bg-dots {
+    background-image: radial-gradient(rgba(0,0,0,0.15) 1.5px, transparent 2px);
+    background-size: 24px 24px;
+  }
+}
+
+/* ─── Animations ─────────────────────────────────────────────── */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-marquee { animation: marquee 24s linear infinite; }
+.animate-marquee-slow { animation: marquee 40s linear infinite; }
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.animate-spin-slow { animation: spin-slow 10s linear infinite; }
+
+@keyframes sticker-bounce {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50%       { transform: translateY(-8px) rotate(-2deg); }
+}
+.animate-sticker { animation: sticker-bounce 2.8s ease-in-out infinite; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.4s ease-out forwards; }
+
+/* ─── Streaming cursor ───────────────────────────────────────── */
+.streaming-cursor::after {
+  content: "▋";
+  animation: blink 1s step-end infinite;
+  margin-left: 2px;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ─── Code blocks ────────────────────────────────────────────── */
+pre, code { font-family: 'JetBrains Mono', monospace; }
+
+/* ─── Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; }
+::-webkit-scrollbar-track { background: var(--neo-bg); }
+::-webkit-scrollbar-thumb { background: #000; border-radius: 0; }
+
+/* ─── Reduced motion ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee, .animate-marquee-slow,
+  .animate-spin-slow, .animate-sticker, .fade-up {
+    animation: none !important;
+  }
+}

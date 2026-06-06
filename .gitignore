@@ -1,0 +1,29 @@
+# Frontend dependencies and builds
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+
+# Backend compiled files and virtual environments
+backend/__pycache__/
+backend/*.pyc
+backend/.venv/
+backend/venv/
+backend/env/
+
+# RAG Database and Uploaded Textbooks
+backend/chroma_db/
+backend/data/**/*.pdf
+
+# Environment configs (API Keys)
+backend/.env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs and system files
+*.log
+.DS_Store
+Thumbs.db
