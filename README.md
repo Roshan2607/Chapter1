@@ -1,140 +1,127 @@
-# AI Tutor
+# Chapter1 AI Tutor
 
-Adaptive AI tutor for engineering students (CSE/ECE, 3rd & 4th semester).
+An adaptive, research-grounded AI tutoring platform engineered for undergraduate engineering students. The system parses textbook resources, dynamically builds knowledge graphs, structures progressive quizzes, and adapts explanations based on student comprehension and customized tutoring styles.
 
-**Not a chatbot. A structured teaching system.**
+The platform is designed in a high-contrast neobrutalist aesthetic, using clear visual hierarchies, modern typography (Space Grotesk and Lora), and robust interactive visual panels.
 
-## What it does
+---
 
-1. **Explains** any topic from your textbook (RAG — no hallucination)
-2. **Visualises** concepts with live interactive embeds (VisuAlgo, CircuitVerse, TURIX Lab) or dynamically-generated p5.js animations
-3. **Tests** with progressive MCQ quizzes (3 difficulty levels)
-4. **Assesses** open-ended application questions
-5. **Adapts** when confused — re-explains from a different angle
+## Core Capabilities
 
-## Subjects
+1. **Textbook-Grounded Explanations (RAG)**: The tutor retrieves context from multiple uploaded syllabus textbooks rather than drawing from generic, unverified training data. This ensures absolute correctness and aligns terminology with the active university curriculum.
+2. **Interactive Concept Visualizations**: A sandboxed panel generates either p5.js canvas animations (for continuous, mathematical, or physical simulations) or Mermaid.js diagrams (for structural, sequence, network, and tree layouts) dynamically based on the requested concept.
+3. **Multi-Textbook Management**: Supports dropping and uploading multiple textbook PDFs per subject, automatically extracting text chunks, compiling embeddings, and updating index states asynchronously in the background.
+4. **Progressive Assessment Loop**: Evaluates understanding through three difficulty tiers of scenario-based multiple-choice quizzes, followed by an open-ended application check parsed by an AI assessor.
+5. **Adaptive Remediation**: If a student demonstrates misconceptions during assessments, the tutor triggers targeted re-explanations from fresh conceptual angles (concept-first, code-first, or analogy-first) rather than repeating the same explanation.
+6. **Tutoring Personas**: Offers customizable explanation styles configurable globally from the user profile settings, including:
+   - Balanced: A mix of technical specifications and conceptual models.
+   - Analogy-First: Heavy focus on vivid real-world systems analogies.
+   - Socratic Guide: Minimal explanations using hints and leading questions.
+   - Code-First: Straightforward, concrete execution traces and code snippets.
+   - ELIA5 (Explain Like I'm 5): Child-friendly metaphors and simple, non-jargon wording.
 
-| Subject | Key | PDF folder |
-|---------|-----|------------|
-| Data Structures & Algorithms | `dsa` | `backend/data/dsa/` |
-| Digital VLSI | `dvlsi` | `backend/data/dvlsi/` |
-| Control Systems | `cs` | `backend/data/cs/` |
-| Computer Networks | `networks` | `backend/data/networks/` |
+---
 
-## Setup
+## Technical Architecture
 
-### 1. Get a Groq API key
-Sign up at https://console.groq.com — free tier is sufficient.
-
-### 2. Backend
-
-```bash
-cd backend
-pip install -r requirements.txt
-```
-
-Create `.env`:
-```
-GROQ_API_KEY=your_groq_api_key_here
-```
-
-Start:
-```bash
-python main.py
-# Runs on http://localhost:8000
-```
-
-### 3. Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-# Runs on http://localhost:3000
-```
-
-### 4. Add textbook PDFs (optional but recommended)
-
-Drop PDF files into the subject folders:
-```
-backend/data/dsa/your_textbook.pdf
-backend/data/dvlsi/your_textbook.pdf
-backend/data/cs/your_textbook.pdf
-backend/data/networks/your_textbook.pdf
-```
-
-Then click **"Index PDF"** on the subject card (or call `POST /api/index/build`).
-
-**First run**: downloads the embedding model (~130MB). Subsequent runs load from cache.
-
-The app works without PDFs — the AI uses its training data. With PDFs, answers are grounded in your specific textbook.
-
-## Architecture
+### Directory Layout
 
 ```
 ai-tutor/
+├── .gitignore              # Monorepo version control exclusions
+├── README.md               # System overview and usage instructions
 ├── backend/
-│   ├── main.py           # FastAPI app + all routes
-│   ├── agents.py         # Groq LLM agent functions
-│   ├── rag.py            # LlamaIndex + ChromaDB RAG pipeline
-│   ├── visualizations.py # Visualization selector + p5.js generator
-│   ├── session.py        # In-memory session state
-│   └── data/             # Drop PDFs here
-├── frontend/
-│   ├── app/
-│   │   ├── page.tsx                   # Subject selection
-│   │   └── learn/[subject]/page.tsx   # Learning interface
-│   ├── components/
-│   │   ├── ExplanationCard.tsx  # Structured explanation renderer
-│   │   ├── VisualPanel.tsx      # iframe / p5.js visualizer
-│   │   ├── QuizCard.tsx         # MCQ quiz component
-│   │   └── Sidebar.tsx          # Session history
-│   └── lib/
-│       ├── api.ts    # Backend API calls
-│       └── types.ts  # TypeScript interfaces
+│   ├── main.py             # FastAPI entrypoint, HTTP router, and SSE stream controllers
+│   ├── agents.py           # LLM agent definitions (assessor, generator, reexplainer, etc.)
+│   ├── database.py         # MongoDB connections, session managers, and visual caches
+│   ├── session.py          # Session model and state updating helpers
+│   ├── rag.py              # LlamaIndex chunking, HuggingFace embeddings, and ChromaDB RAG
+│   ├── visualizations.py   # Fallback templates and escape formatting utilities
+│   ├── requirements.txt    # Python package dependencies
+│   └── data/               # Subject-specific directories for uploaded textbooks
+└── frontend/
+    ├── app/                # Next.js App Router directories (home, learn, login, subjects)
+    ├── components/         # Shared React modules (ScrollReveal, Sidebar, ArrowIcon, etc.)
+    ├── lib/                # API wrapper client and TypeScript declarations
+    └── next.config.js      # Next.js build compilation and reverse-proxy settings
 ```
 
-## Tech stack
+### Technologies Used
 
-**Backend**: Python, FastAPI, LlamaIndex, ChromaDB, HuggingFace embeddings (BAAI/bge-small-en-v1.5), Groq API (llama-3.3-70b-versatile), pypdf
+- **Frontend**: Next.js 14, React, Tailwind CSS, TypeScript, p5.js, Mermaid.js
+- **Backend**: Python, FastAPI, LlamaIndex, ChromaDB, HuggingFace Embeddings (BAAI/bge-small-en-v1.5)
+- **Database**: MongoDB (User profiles, password registry, session states, and diagram cache)
+- **LLM Gateway**: Groq SDK (Llama-3.3-70b-versatile with Llama-3.1-8b-instant rate limit failover)
 
-**Frontend**: Next.js 14, Tailwind CSS, TypeScript
+---
 
-## Teaching loop
+## Database & Authentication Setup
 
-```
-[topic input]
-    → explain (streamed) + visualization loads
-    
-[explore]
-    → unlimited follow-up questions
-    → "Quiz me" button
-    
-[quiz] 3 MCQ questions
-    → perfect score → harder difficulty OR move on
-    → 2/3 → move to check
-    → <2/3 → re-explain + retry
-    
-[check] open-ended application question
-    → UNDERSTOOD → next topic
-    → PARTIAL → try again
-    → CONFUSED → clarify which part, re-explain
+The authentication flow utilizes a MongoDB registry to store credentials and manage persistent states:
+- **Hashing Security**: Password hashing is handled via PBKDF2-HMAC-SHA256 with 100,000 iterations and random 16-byte salts.
+- **Fail-Safe Fallback**: If local MongoDB is unavailable during boot, the backend automatically activates an in-memory database fallback to allow offline testing and development.
+- **User Isolation**: Every learning session and chat log is tied to a user ID. Cross-user requests are blocked by FastAPI auth dependencies.
 
-[clarify]
-    → pick: concept / syntax / analogy
-    → targeted re-explanation → back to check
-```
+---
 
-## API endpoints
+## Local Setup
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/session/create` | Create session |
-| GET | `/api/index/status` | Check index status |
-| POST | `/api/index/build` | Build index from PDFs |
-| POST | `/api/explain` | Stream explanation (SSE) |
-| POST | `/api/followup` | Stream follow-up answer (SSE) |
-| POST | `/api/quiz/generate` | Generate 3 MCQ questions |
-| POST | `/api/quiz/answer` | Submit quiz answer |
-| POST | `/api/assess` | Assess open-ended answer |
-| POST | `/api/reexplain` | Re-explain with focus |
+### 1. Backend Setup
+
+Prerequisite: Python 3.10+ and a running MongoDB instance (optional, falls back to in-memory if down).
+
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+2. Install Python dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Create a `.env` file in the `backend/` directory:
+   ```env
+   GROQ_API_KEY=your_groq_api_key_here
+   MONGODB_URI=mongodb://localhost:27017
+   ```
+4. Start the FastAPI development server:
+   ```bash
+   python main.py
+   ```
+   The backend will run on `http://localhost:8000`.
+
+### 2. Frontend Setup
+
+Prerequisite: Node.js 18+ and npm.
+
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+2. Install Node packages:
+   ```bash
+   npm install
+   ```
+3. Start the Next.js development server:
+   ```bash
+   npm run dev
+   ```
+   The frontend will run on `http://localhost:3000`.
+
+---
+
+## Deployment Guide
+
+### Monorepo Structure
+The master `.gitignore` at the root excludes package locks, compilation caches, logs, and PDF files. The Next.js frontend has been configured to read an environment variable for backend connections.
+
+### 1. Frontend Deployment (Vercel)
+- Create a new project on Vercel and import your repository.
+- Set the **Root Directory** to `frontend`.
+- Go to Project Settings -> Environment Variables, and set:
+  - **Key**: `BACKEND_URL`
+  - **Value**: `https://your-deployed-backend.com`
+  Vercel will build the frontend and automatically proxy all `/api` requests to your hosted API.
+
+### 2. Backend Deployment
+- Host the backend on any platform supporting Python containers (e.g. Render, Railway, Fly.io).
+- Set the `GROQ_API_KEY` and `MONGODB_URI` environment variables in your hosting provider's dashboard.
