@@ -118,7 +118,7 @@ class InMemoryCollection:
 # ─── Database Initialization & Failsafe Fallback ──────────────────────────────
 
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
-client = pymongo.MongoClient(MONGODB_URI, serverSelectionTimeoutMS=2000)
+client = pymongo.MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000, tlsAllowInvalidCertificates=True)
 db = client["chapter1_db"]
 
 use_fallback = False
@@ -128,7 +128,7 @@ try:
 except Exception as e:
     use_fallback = True
     print("\n" + "="*80)
-    print("WARNING: Local MongoDB is not running on localhost:27017.")
+    print(f"WARNING: MongoDB connection failed: {e}")
     print("-> Failsafe activated: falling back to an IN-MEMORY database.")
     print("-> Registering and logging in will work in-memory for testing.")
     print("="*80 + "\n")
