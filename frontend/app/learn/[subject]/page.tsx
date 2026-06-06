@@ -336,6 +336,7 @@ export default function LearnPage({
     addMsg({ id: msgId, role: "assistant", type: "followup", content: "", streaming: true });
 
     setIsStreaming(true);
+    setVizLoading(true);
     try {
       await streamFollowUp(
         sessionId,
@@ -347,12 +348,19 @@ export default function LearnPage({
             )
           );
         },
-        () => {
+        (data) => {
           setMessages((prev) =>
             prev.map((m) => (m.id === msgId ? { ...m, streaming: false } : m))
           );
+          if (data && data.visualization) {
+            setVisualization(data.visualization);
+          }
+          setVizLoading(false);
         },
-        (err) => setError(err)
+        (err) => {
+          setError(err);
+          setVizLoading(false);
+        }
       );
     } finally {
       setIsStreaming(false);

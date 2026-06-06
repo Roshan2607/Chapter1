@@ -12,12 +12,43 @@ from dotenv import load_dotenv
 # Ensure environment variables are loaded from the backend directory
 load_dotenv(Path(__file__).parent / ".env")
 
-# ─── In-Memory Fallback Collection (For Offline/Development) ──────────────────
+class InMemoryCursor:
+    def __init__(self, docs):
+        self.docs = docs
+
+    def sort(self, key, direction=-1):
+        # Sort docs by key. Direction -1 is descending, 1 is ascending
+        reverse = direction == -1
+        # Use a safe sort key that handles missing keys or None
+        self.docs = sorted(
+            self.docs,
+            key=lambda x: x.get(key) if x.get(key) is not None else datetime.datetime.min,
+            reverse=reverse
+        )
+        return self
+
+    def __iter__(self):
+        return iter(self.docs)
+
 
 class InMemoryCollection:
     def __init__(self, name: str):
         self.name = name
         self.docs = []
+
+    def find(self, filter_dict: dict = None) -> InMemoryCursor:
+        if filter_dict is None:
+            filter_dict = {}
+        matched = []
+        for doc in self.docs:
+            match = True
+            for k, v in filter_dict.items():
+                if doc.get(k) != v:
+                    match = False
+                    break
+            if match:
+                matched.append(doc)
+        return InMemoryCursor(matched)
 
     def find_one(self, filter_dict: dict) -> Optional[dict]:
         for doc in self.docs:

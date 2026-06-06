@@ -79,13 +79,19 @@ def explainer_stream(topic: str, context: str, session_history: list, tutor_styl
 
     style_instruction = ""
     if tutor_style == "analogy-first":
-        style_instruction = "IMPORTANT style instruction: Focus on explaining the topic via an illustrative and vivid real-world analogy FIRST, before diving into dry technical points. Your Explanation section should lead with or heavily focus on the analogy intuition."
+        style_instruction = """IMPORTANT style instruction: Focus heavily on analogy intuition first.
+Make the Analogy section the most detailed and elaborate part of your response.
+Under all other headers (Explanation, Key Points, Example, Check), explain every concept by relating it back to the core analogy to build strong visual intuition."""
     elif tutor_style == "socratic":
-        style_instruction = "IMPORTANT style instruction: Take a Socratic approach. Do not give the answers away completely. Provide structured clues, prompt the student to think, and ask guiding questions to let them figure out the core logic themselves. Keep explanations minimal and question-driven."
+        style_instruction = """IMPORTANT style instruction: Take a Socratic approach. Do not give direct answers or explanations.
+Under the headers (Explanation, Key Points, Analogy, Example, Check), write guiding questions, clues, and thought-provoking prompts that lead the student to think and discover the answers themselves. Keep text minimal and question-driven."""
     elif tutor_style == "code-first":
-        style_instruction = "IMPORTANT style instruction: Focus on implementation details first. Show practical, step-by-step calculations or Python/pseudocode snippets immediately, and explain how the lines of code or values operate to represent the concept."
+        style_instruction = """IMPORTANT style instruction: Focus on implementation details and code first.
+Start the Example section with a practical, step-by-step code snippet or logical trace.
+Focus the Explanation and Key Points on how the lines of code or data values operate to represent the concept."""
     elif tutor_style == "elia5":
-        style_instruction = "IMPORTANT style instruction: Explain Like I'm 5 (ELIA5). Use extremely simple, clear, and non-technical language. Do not use intimidating jargon. Explain it as if you are talking to a smart child using fun, basic metaphors."
+        style_instruction = """IMPORTANT style instruction: Explain Like I'm 5 (ELIA5). Use extremely simple, clear, and non-technical language. Do not use intimidating jargon.
+Under all headers (Explanation, Key Points, Analogy, Example, Check), explain the concept using fun, basic metaphors that a smart child would understand."""
 
     history_str = ""
     if session_history:
@@ -156,7 +162,7 @@ def follow_up_stream(
     system = f"""You are a tutor. The student is learning about "{topic}".
 {style_instruction}
 Answer follow-up questions in 2-4 sentences or bullet points.
-Stay on topic. If asked something unrelated, redirect: "Let's stay focused on {topic} for now."
+Encourage the student to explore connections and trace concepts down to their roots. If the student asks about related prerequisites, underlying details, or adjacent engineering concepts, welcome the question, explain the connection to "{topic}", and guide them deeper into the rabbit hole.
 Use pure Python only if showing code, under 10 lines, concrete values only.
 No imports in code examples."""
 

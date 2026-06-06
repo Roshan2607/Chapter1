@@ -354,8 +354,16 @@ async def follow_up(req: FollowUpRequest, current_user: dict = Depends(get_curre
                 full_text += chunk
                 yield _sse_chunk(chunk)
 
+            # Get new visualization for the follow-up question
+            subject = s_current["subject"]
+            context = s_current.get("context", "")
+            viz = visualizations.get_visualization(req.question, subject, context)
+            
+            # Persist the updated visualization in the session
+            sess.update_session(req.session_id, {"visualization": viz})
+
             sess.add_message(req.session_id, "assistant", full_text)
-            yield _sse_done({})
+            yield _sse_done({"visualization": viz})
         except Exception as e:
             logger.error(f"Follow-up stream error: {e}")
             yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"

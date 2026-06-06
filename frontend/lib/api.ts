@@ -171,7 +171,7 @@ export async function streamFollowUp(
   sessionId: string,
   question: string,
   onChunk: (text: string) => void,
-  onDone: () => void,
+  onDone: (data: { visualization: Visualization }) => void,
   onError: (err: string) => void
 ) {
   const response = await fetch(`${API_BASE}/followup`, {
@@ -202,7 +202,7 @@ export async function streamFollowUp(
       try {
         const data = JSON.parse(trimmed.slice(6));
         if (data.type === "chunk") onChunk(data.content);
-        else if (data.type === "done") onDone();
+        else if (data.type === "done") onDone(data);
         else if (data.type === "error") onError(data.content);
       } catch (e) {
         console.error("Failed to parse SSE line:", trimmed, e);
@@ -216,7 +216,7 @@ export async function streamFollowUp(
       try {
         const data = JSON.parse(trimmed.slice(6));
         if (data.type === "chunk") onChunk(data.content);
-        else if (data.type === "done") onDone();
+        else if (data.type === "done") onDone(data);
         else if (data.type === "error") onError(data.content);
       } catch (e) {
         console.error("Failed to parse final SSE buffer:", trimmed, e);

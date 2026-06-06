@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+.env
+
+# RAG databases and textbook PDFs
+chroma_db/
+data/**/*.pdf
