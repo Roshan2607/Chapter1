@@ -57,16 +57,22 @@ def get_visualization(topic: str, subject: str, context: str = "") -> dict:
     import database
     cached_viz = database.get_cached_visualization(subject, topic)
     if cached_viz:
+        if cached_viz.get("type") == "mermaid":
+            cached_viz["code"] = _clean_mermaid_code(cached_viz["code"])
         return cached_viz
 
     # Fall back to generator (Mermaid or p5.js)
     concept_desc = _get_concept_description(topic_lower)
     try:
         vis = visualization_generator(topic, concept_desc, context)
+        code = vis["code"]
+        if vis["type"] == "mermaid":
+            code = _clean_mermaid_code(code)
+            
         viz_data = {
             "type": vis["type"],
             "url": "",
-            "code": vis["code"],
+            "code": code,
             "label": f"Generated {vis['type']} visual",
         }
         database.set_cached_visualization(subject, topic, viz_data)
@@ -79,6 +85,22 @@ def get_visualization(topic: str, subject: str, context: str = "") -> dict:
             "code": _simple_p5js(topic),
             "label": "Generated visual",
         }
+
+
+def _clean_mermaid_code(code: str) -> str:
+    import re
+    # 1. Clean up style graph/flowchart keywords
+    code = re.sub(r'style\s+(?:graph|flowchart|sequenceDiagram|stateDiagram-v2)\s+[^;\n]+(?:;)?', '', code, flags=re.IGNORECASE)
+    # 2. Clean up labeled arrow typos (e.g. -->|Label|>)
+    code = re.sub(r'-->\s*\|([^|]+)\|\s*>', r'-->|\1|', code)
+    # 3. Clean up edgeStyle styling
+    code = re.sub(r'edgeStyle\s+[^;\n]+(?:;)?', '', code, flags=re.IGNORECASE)
+    # 4. Clean up semicolons at the end of diagram headers (e.g. graph TD; or sequenceDiagram;)
+    code = re.sub(r'^(\s*[a-zA-Z0-9_-]+(?:\s+[a-zA-Z0-9_-]+)?)\s*;', r'\1', code, flags=re.MULTILINE)
+    # 5. Clean up trailing semicolons for sequence/state/class/er diagrams
+    if re.search(r'^\s*(sequenceDiagram|stateDiagram|classDiagram|erDiagram)', code, flags=re.IGNORECASE | re.MULTILINE):
+        code = re.sub(r';+\s*$', '', code, flags=re.MULTILINE)
+    return code
 
 
 def _get_concept_description(topic_lower: str) -> str:
