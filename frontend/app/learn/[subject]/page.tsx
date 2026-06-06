@@ -307,6 +307,9 @@ export default function LearnPage({
           setError(err);
           setIsStreaming(false);
           setVizLoading(false);
+          setMessages((prev) =>
+            prev.map((m) => (m.id === msgId ? { ...m, streaming: false } : m))
+          );
         }
       );
     } finally {
@@ -336,7 +339,18 @@ export default function LearnPage({
     addMsg({ id: msgId, role: "assistant", type: "followup", content: "", streaming: true });
 
     setIsStreaming(true);
-    setVizLoading(true);
+
+    const questionLower = question.toLowerCase();
+    const triggerWords = ["diagram", "visual", "sketch", "animation", "chart", "graph", "visualisation", "flowchart", "draw"];
+    const conceptKeywords = ["recursion", "sorting", "linked list", "binary tree", "stack", "queue", "hash table", "graph", "prim", "kruskal", "dijkstra", "shortest path", "minimum spanning", "routing", "ospf", "pid", "flip flop", "cmos", "tcp", "os scheduling", "page replacement", "packet", "frame"];
+    const hasConceptKeyword = conceptKeywords.some(k => questionLower.includes(k));
+    const hasTriggerWord = triggerWords.some(w => questionLower.includes(w));
+    const shouldUpdateViz = hasConceptKeyword || hasTriggerWord || !visualization;
+
+    if (shouldUpdateViz) {
+      setVizLoading(true);
+    }
+
     try {
       await streamFollowUp(
         sessionId,
@@ -360,6 +374,9 @@ export default function LearnPage({
         (err) => {
           setError(err);
           setVizLoading(false);
+          setMessages((prev) =>
+            prev.map((m) => (m.id === msgId ? { ...m, streaming: false } : m))
+          );
         }
       );
     } finally {

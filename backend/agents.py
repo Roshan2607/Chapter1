@@ -20,7 +20,7 @@ def get_client() -> Groq:
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
             raise ValueError("GROQ_API_KEY not set in environment")
-        _client = Groq(api_key=api_key)
+        _client = Groq(api_key=api_key, timeout=25.0)
     return _client
 
 
@@ -357,6 +357,7 @@ Format rules:
    - Draw elements clearly and label them. Avoid special characters in node IDs (or wrap them in double quotes like A["Node A"]).
    - Edge arrows must be valid (e.g., use `A -->|Label| B` or `A -- Label --> B`). Do NOT append trailing arrowhead symbols inside or after the label (e.g., do NOT write `A -->|Label|> B`).
    - Do NOT style diagram syntax keywords (e.g., do NOT write `style graph fill:...` or `style flowchart fill:...` as `graph` and `flowchart` are reserved keywords and will cause syntax errors). Only style defined node IDs (e.g., `style A fill:...`).
+   - Do NOT output any edgeStyle or edge styling definitions (e.g., do NOT write 'edgeStyle default ...' or 'edge ...' or 'edgeStyle B --> C ...'). These cause fatal Mermaid syntax parsing errors and will crash rendering. Use standard linkStyle index lines instead (e.g. 'linkStyle 0 stroke:#000000,stroke-width:2px;'), or omit link styling entirely.
 2. For "p5js":
    - Return raw self-contained p5.js code (setup(), draw(), mousePressed(), etc.) with a responsive canvas (createCanvas(windowWidth, windowHeight)).
    - Implement windowResized() { resizeCanvas(windowWidth, windowHeight); }.
@@ -386,16 +387,35 @@ Decide on the format ('mermaid' or 'p5js') and return the valid JSON containing 
             ],
             max_tokens=3000,
             temperature=0.5,
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
+            timeout=12.0
         )
-        raw = response.choices[0].message.content.strip()
+        content = response.choices[0].message.content
+        if not content:
+            raise ValueError(f"Groq returned an empty response. Choices: {response.choices}")
+        raw = content.strip()
         data = parse_json_safely(raw)
+        if not isinstance(data, dict):
+            raise ValueError(f"Expected a JSON dictionary, got {type(data)}")
+        
+        code = data.get("code") or ""
+        
+        # Clean up any embedded markdown code block syntax inside the code string
+        if code.strip().startswith("```"):
+            code_cleaned = code.strip()
+            first_newline = code_cleaned.find("\n")
+            if first_newline != -1:
+                code_cleaned = code_cleaned[first_newline:].strip()
+            if code_cleaned.endswith("```"):
+                code_cleaned = code_cleaned[:-3].strip()
+            code = code_cleaned
+
         return {
-            "type": data.get("type", "p5js"),
-            "code": data.get("code", "")
+            "type": data.get("type") or "p5js",
+            "code": code
         }
     except Exception as e:
-        logger.error(f"visualization_generator error: {e}")
+        logger.error(f"visualization_generator error: {e}", exc_info=True)
         return {
             "type": "p5js",
             "code": _fallback_p5js(topic)

@@ -32,6 +32,7 @@ def create_session(subject: str, user_id: Optional[str] = None) -> str:
         "missed_concept": "",
         "confused_count": 0,
         "session_history": [],
+        "visualization": None,
         "created_at": datetime.datetime.utcnow(),
         "updated_at": datetime.datetime.utcnow(),
     }
@@ -94,5 +95,6 @@ def complete_topic(session_id: str, understood: bool, score: int):
             "awaiting_review": False,
             "missed_concept": "",
             "confused_count": 0,
+            "visualization": None,
         }
         update_session(session_id, reset_fields)

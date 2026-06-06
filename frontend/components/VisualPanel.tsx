@@ -234,6 +234,14 @@ export default function VisualPanel({ visualization, topic, subject, loading }: 
       code = code.replace(/style\s+(?:graph|flowchart|sequenceDiagram|stateDiagram-v2)\s+[^;\n]+(?:;)?/gi, '');
       // Clean up common labeled arrow typos (e.g. -->|Label|>)
       code = code.replace(/-->\s*\|([^|]+)\|\s*>/g, '-->|$1|');
+      // Clean up invalid edgeStyle styling hallucinations
+      code = code.replace(/edgeStyle\s+[^;\n]+(?:;)?/gi, '');
+      // Clean up semicolons at the end of diagram headers (e.g. graph TD; or sequenceDiagram;)
+      code = code.replace(/^(\s*[a-zA-Z0-9_-]+(?:\s+[a-zA-Z0-9_-]+)?)\s*;/gm, '$1');
+      // If it's a sequence/state/class/er diagram, strip trailing semicolons from lines to prevent parser errors
+      if (/^\s*(sequenceDiagram|stateDiagram|classDiagram|erDiagram)/i.test(code)) {
+        code = code.replace(/;+\s*$/gm, '');
+      }
 
       return (
         <iframe

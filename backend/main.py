@@ -204,9 +204,19 @@ def create_session(req: CreateSessionRequest, current_user: dict = Depends(get_c
 def get_session(session_id: str, current_user: dict = Depends(get_current_user)):
     s = _require_session(session_id, current_user["_id"])
     s_copy = dict(s)
-    if s_copy.get("topic"):
-        viz = visualizations.get_visualization(s_copy["topic"], s_copy["subject"], s_copy.get("context", ""))
-        s_copy["visualization"] = viz
+    if s_copy.get("topic") and not s_copy.get("visualization"):
+        try:
+            viz = visualizations.get_visualization(s_copy["topic"], s_copy["subject"], s_copy.get("context", ""))
+            s_copy["visualization"] = viz
+            sess.update_session(session_id, {"visualization": viz})
+        except Exception as e:
+            logger.error(f"Error generating visualization for session load: {e}")
+            s_copy["visualization"] = {
+                "type": "p5js",
+                "url": "",
+                "code": visualizations._simple_p5js(s_copy["topic"]),
+                "label": "Fallback visual"
+            }
     return s_copy
 
 
@@ -294,6 +304,7 @@ async def explain(req: ExplainRequest, current_user: dict = Depends(get_current_
         "quiz_difficulty": 1,
         "perfect_rounds": 0,
         "confused_count": 0,
+        "visualization": None,
     })
 
     def generate():
@@ -319,7 +330,19 @@ async def explain(req: ExplainRequest, current_user: dict = Depends(get_current_
             sess.add_message(req.session_id, "assistant", full_text)
 
             # Get visualization
-            viz = visualizations.get_visualization(req.topic, subject, context)
+            try:
+                viz = visualizations.get_visualization(req.topic, subject, context)
+            except Exception as viz_err:
+                logger.error(f"Failed to get visualization in explain: {viz_err}")
+                viz = {
+                    "type": "p5js",
+                    "url": "",
+                    "code": visualizations._simple_p5js(req.topic),
+                    "label": "Fallback visual",
+                }
+
+            # Update session with the generated/fallback visualization
+            sess.update_session(req.session_id, {"visualization": viz})
 
             yield _sse_done({
                 "check_question": check_q,
@@ -354,13 +377,29 @@ async def follow_up(req: FollowUpRequest, current_user: dict = Depends(get_curre
                 full_text += chunk
                 yield _sse_chunk(chunk)
 
-            # Get new visualization for the follow-up question
-            subject = s_current["subject"]
-            context = s_current.get("context", "")
-            viz = visualizations.get_visualization(req.question, subject, context)
-            
-            # Persist the updated visualization in the session
-            sess.update_session(req.session_id, {"visualization": viz})
+            # Determine if we should generate a new visualization for the follow-up
+            question_lower = req.question.lower()
+            trigger_keywords = ["diagram", "visual", "sketch", "animation", "chart", "graph", "visualisation", "flowchart", "draw"]
+            has_concept_keyword = any(k in question_lower for k in visualizations.CONCEPT_DESCRIPTIONS.keys())
+            has_trigger_word = any(w in question_lower for w in trigger_keywords)
+
+            if has_concept_keyword or has_trigger_word or not existing_viz:
+                subject = s_current["subject"]
+                context = s_current.get("context", "")
+                try:
+                    viz = visualizations.get_visualization(req.question, subject, context)
+                except Exception as viz_err:
+                    logger.error(f"Failed to get visualization in follow_up: {viz_err}")
+                    viz = existing_viz or {
+                        "type": "p5js",
+                        "url": "",
+                        "code": visualizations._simple_p5js(req.question),
+                        "label": "Fallback visual",
+                    }
+                # Persist the updated visualization in the session
+                sess.update_session(req.session_id, {"visualization": viz})
+            else:
+                viz = existing_viz
 
             sess.add_message(req.session_id, "assistant", full_text)
             yield _sse_done({"visualization": viz})

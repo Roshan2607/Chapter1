@@ -1,9 +1,7 @@
-"""
-Visualization selector.
-Returns ("iframe", url, label) or ("p5js", code, label).
-"""
-
+import logging
 from agents import visualization_generator
+
+logger = logging.getLogger(__name__)
 
 # keyword → (url_template, label)
 # Keywords are lowercased and checked via substring match
