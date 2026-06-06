@@ -356,6 +356,7 @@ Format rules:
    - Return a valid, clean Mermaid diagram (e.g. graph TD, sequenceDiagram, stateDiagram-v2).
    - Draw elements clearly and label them. Avoid special characters in node IDs (or wrap them in double quotes like A["Node A"]).
    - Edge arrows must be valid (e.g., use `A -->|Label| B` or `A -- Label --> B`). Do NOT append trailing arrowhead symbols inside or after the label (e.g., do NOT write `A -->|Label|> B`).
+   - For sequence diagrams (`sequenceDiagram`), ALWAYS wrap arrow message labels and notes in double quotes (e.g., `A->>B: "Message Text"` and `Note over A: "Note Text"`) to prevent nested colon, parentheses, or spacing syntax errors.
    - Do NOT style diagram syntax keywords (e.g., do NOT write `style graph fill:...` or `style flowchart fill:...` as `graph` and `flowchart` are reserved keywords and will cause syntax errors). Only style defined node IDs (e.g., `style A fill:...`).
    - Do NOT output any edgeStyle or edge styling definitions (e.g., do NOT write 'edgeStyle default ...' or 'edge ...' or 'edgeStyle B --> C ...'). These cause fatal Mermaid syntax parsing errors and will crash rendering. Use standard linkStyle index lines instead (e.g. 'linkStyle 0 stroke:#000000,stroke-width:2px;'), or omit link styling entirely.
 2. For "p5js":
@@ -399,6 +400,8 @@ Decide on the format ('mermaid' or 'p5js') and return the valid JSON containing 
             raise ValueError(f"Expected a JSON dictionary, got {type(data)}")
         
         code = data.get("code") or ""
+        if not code.strip():
+            raise ValueError("Groq returned empty code in visualization JSON")
         
         # Clean up any embedded markdown code block syntax inside the code string
         if code.strip().startswith("```"):
@@ -409,6 +412,9 @@ Decide on the format ('mermaid' or 'p5js') and return the valid JSON containing 
             if code_cleaned.endswith("```"):
                 code_cleaned = code_cleaned[:-3].strip()
             code = code_cleaned
+
+        if not code.strip():
+            raise ValueError("Cleaned code is empty in visualization JSON")
 
         return {
             "type": data.get("type") or "p5js",
