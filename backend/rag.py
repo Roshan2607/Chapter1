@@ -9,7 +9,10 @@ SUBJECTS = ["dsa", "c", "python", "cn", "physics", "chemistry"]
 DATA_DIR = Path(__file__).parent / "data"
 CHROMA_DIR = Path(__file__).parent / "chroma_db"
 
+import threading
+
 _indices: dict = {}
+_index_locks: dict = {}
 _embed_model = None
 _chroma_client = None
 
@@ -137,19 +140,30 @@ def load_index(subject: str):
     return index
 
 
+def _get_subject_lock(subject: str):
+    if subject not in _index_locks:
+        _index_locks[subject] = threading.Lock()
+    return _index_locks[subject]
+
 def get_index(subject: str):
     """Get index, building if necessary."""
     if subject in _indices:
         return _indices[subject]
-    try:
-        return load_index(subject)
-    except Exception:
+    
+    with _get_subject_lock(subject):
+        # Double-check inside lock
+        if subject in _indices:
+            return _indices[subject]
+            
         try:
-            index, _ = build_index(subject)
-            return index
-        except Exception as e:
-            logger.error(f"Could not get index for {subject}: {e}")
-            return None
+            return load_index(subject)
+        except Exception:
+            try:
+                index, _ = build_index(subject)
+                return index
+            except Exception as e:
+                logger.error(f"Could not get index for {subject}: {e}")
+                return None
 
 
 def retrieve_context(subject: str, topic: str, top_k: int = 3) -> str:
