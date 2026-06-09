@@ -108,20 +108,3 @@ Prerequisite: Node.js 18+ and npm.
    The frontend will run on `http://localhost:3000`.
 
 ---
-
-## Deployment Guide
-
-### Monorepo Structure
-The master `.gitignore` at the root excludes package locks, compilation caches, logs, and PDF files. The Next.js frontend has been configured to read an environment variable for backend connections.
-
-### 1. Frontend Deployment (Vercel)
-- Create a new project on Vercel and import your repository.
-- Set the **Root Directory** to `frontend`.
-- Go to Project Settings -> Environment Variables, and set:
-  - **Key**: `BACKEND_URL`
-  - **Value**: `https://your-deployed-backend.com`
-  Vercel will build the frontend and automatically proxy all `/api` requests to your hosted API.
-
-### 2. Backend Deployment
-- Host the backend on any platform supporting Python containers (e.g. Render, Railway, Fly.io).
-- Set the `GROQ_API_KEY` and `MONGODB_URI` environment variables in your hosting provider's dashboard.
