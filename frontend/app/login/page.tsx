@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../AuthContext";
-import { login as apiLogin, register as apiRegister, requestOtp } from "@/lib/api";
+import { login as apiLogin, register as apiRegister } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
