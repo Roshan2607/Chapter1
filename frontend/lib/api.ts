@@ -16,24 +16,11 @@ function getHeaders(contentType: string = "application/json"): HeadersInit {
   return headers;
 }
 
-export async function requestOtp(email: string, name: string, password: string): Promise<{ success: boolean; message: string }> {
-  const res = await fetch(`${API_BASE}/auth/request-otp`, {
-    method: "POST",
-    headers: getHeaders(),
-    body: JSON.stringify({ email, name, password }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || "Failed to request OTP");
-  }
-  return res.json();
-}
-
-export async function register(email: string, name: string, password: string, otp: string): Promise<{ token: string; user: { email: string; name: string } }> {
+export async function register(email: string, name: string, password: string): Promise<{ token: string; user: { email: string; name: string } }> {
   const res = await fetch(`${API_BASE}/auth/register`, {
     method: "POST",
     headers: getHeaders(),
-    body: JSON.stringify({ email, name, password, otp }),
+    body: JSON.stringify({ email, name, password }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

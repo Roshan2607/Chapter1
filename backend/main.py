@@ -53,16 +53,10 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
 
 # ─── Request Models ────────────────────────────────────────────────────────────
 
-class RequestOTPRequest(BaseModel):
-    email: str
-    name: str
-    password: str
-
 class UserRegisterRequest(BaseModel):
     email: str
     name: str
     password: str
-    otp: str
 
 class UserLoginRequest(BaseModel):
     email: str
@@ -126,40 +120,12 @@ def _sse_done(data: dict) -> str:
 
 # ─── Auth Routes ──────────────────────────────────────────────────────────────
 
-@app.post("/api/auth/request-otp")
-def request_otp(req: RequestOTPRequest, background_tasks: BackgroundTasks):
-    try:
-        otp_code = str(random.randint(100000, 999999))
-        database.store_registration_otp(req.email, req.name, req.password, otp_code)
-        
-        # Send email in background
-        background_tasks.add_task(email_service.send_otp_email, req.email, otp_code)
-        return {"success": True, "message": "OTP sent"}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        import traceback
-        logger.error(f"OTP request error: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
 @app.post("/api/auth/register")
-def register(req: UserRegisterRequest, background_tasks: BackgroundTasks):
+def register(req: UserRegisterRequest):
     try:
-        # Verify OTP
-        otp_doc = database.verify_and_consume_otp(req.email, req.otp)
-        if not otp_doc:
-            raise HTTPException(status_code=400, detail="Invalid or expired OTP")
-            
-        # Register user with verified hash
-        user = database.register_verified_user(req.email, otp_doc["name"], otp_doc["password_hash"])
+        user = database.register_user(req.email, req.name, req.password)
         token = database.create_user_session(user["_id"])
-        
-        # Send Welcome Email
-        background_tasks.add_task(email_service.send_welcome_email, req.email, user["name"])
-        
         return {"token": token, "user": user}
-    except HTTPException:
-        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
