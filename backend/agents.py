@@ -115,9 +115,9 @@ Respond in EXACTLY this format with these exact section headers:
 **Analogy**: [one sentence real-world analogy]
 
 **Example**:
-[Either a self-contained Python code block wrapped in triple backticks (max 12 lines) OR a concrete numerical/logical calculation example with specific values (max 6 lines). Do NOT use Python code if the subject is not programming-based (e.g. for Subnet Mask, show a concrete IP/subnet calculation instead of Python code).]
+[For programming subjects (C, Python): a short code block in the exact language of the subject. For DSA: use clear C++ or pseudocode. For science/theory subjects: a concrete numerical calculation or derivation. Do NOT default to Python code unless the subject is Python. Use the most appropriate format for the specific topic.]
 
-**Check**: [one open-ended question the student must answer in their own words. Accept pseudocode — idea matters not syntax.]
+**Check**: [one simple open-ended question to verify understanding. Must be easy enough for a beginner who just read the explanation.]
 {history_str}"""
 
     stream = create_chat_completion(
@@ -162,8 +162,8 @@ def follow_up_stream(
     system = f"""You are a tutor. The student is learning about "{topic}".
 {style_instruction}
 Answer follow-up questions in 2-4 sentences or bullet points.
-Encourage the student to explore connections and trace concepts down to their roots. If the student asks about related prerequisites, underlying details, or adjacent engineering concepts, welcome the question, explain the connection to "{topic}", and guide them deeper into the rabbit hole.
-Use pure Python only if showing code, under 10 lines, concrete values only.
+Encourage the student to explore connections.
+Do NOT default to Python code. For programming topics, use code ONLY if asked or absolutely necessary, and use the language of the subject (C for C, Python for Python, C++ for DSA). For science/theory topics, use numerical examples, real-world analogies, or derivations instead of code.
 No imports in code examples."""
 
     messages = [{"role": "system", "content": system}]
@@ -250,9 +250,10 @@ def reexplainer(topic: str, context: str, focus: str, session_history: list) -> 
 
     context_str = f"\n\nTextbook context:\n{context}" if context else ""
 
-    system = f"""Re-explain {topic} from scratch. Simpler, different angle.
+    system = f"""The student got a question wrong about {topic}. Re-explain it from scratch using a COMPLETELY DIFFERENT approach than before.
+Do NOT repeat your previous explanation.
 {focus_instruction}
-3-4 sentences or bullet points. End with one simple check question.
+Keep it extremely simple, 3-4 sentences or bullet points. End with one simple check question.
 No filler phrases."""
 
     try:
@@ -291,11 +292,11 @@ Generate 3 MCQ questions about "{topic}" for a student.
 Difficulty level: {diff_desc}
 
 Strict Rules:
-1. NO simple recall or definition questions. Do NOT ask questions like "What is X?" or "Which of the following defines X?".
-2. Every question MUST be dynamic and scenario-based, featuring real-world engineering setups, system faults, code tracing, protocol header states, or circuit troubleshooting.
-3. Distractors (wrong options) must represent common student misconceptions or logical errors, not obvious filler.
-4. Each option should require active reasoning to evaluate.
-5. Provide a clear, detailed step-by-step conceptual or mathematical explanation for the correct choice.
+1. NO simple recall or definition questions.
+2. Questions must test ONLY the basic conceptual understanding of the topic. Do NOT make them too hard or require advanced knowledge outside what was just explained.
+3. Keep the questions focused on practical scenarios but very accessible for a beginner.
+4. Distractors (wrong options) must represent common beginner misconceptions.
+5. Provide a clear, detailed step-by-step conceptual explanation for the correct choice.
 
 Return ONLY a valid JSON object with a "questions" key containing the list of 3 questions:
 {{

@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import random
 from pathlib import Path
 from typing import Optional
 
@@ -18,6 +19,7 @@ import rag
 import agents
 import visualizations
 import database
+import email_service
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -51,10 +53,16 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
 
 # ─── Request Models ────────────────────────────────────────────────────────────
 
+class RequestOTPRequest(BaseModel):
+    email: str
+    name: str
+    password: str
+
 class UserRegisterRequest(BaseModel):
     email: str
     name: str
     password: str
+    otp: str
 
 class UserLoginRequest(BaseModel):
     email: str
@@ -118,16 +126,45 @@ def _sse_done(data: dict) -> str:
 
 # ─── Auth Routes ──────────────────────────────────────────────────────────────
 
-@app.post("/api/auth/register")
-def register(req: UserRegisterRequest):
+@app.post("/api/auth/request-otp")
+def request_otp(req: RequestOTPRequest, background_tasks: BackgroundTasks):
     try:
-        user = database.register_user(req.email, req.name, req.password)
-        token = database.create_user_session(user["_id"])
-        return {"token": token, "user": user}
+        otp_code = str(random.randint(100000, 999999))
+        database.store_registration_otp(req.email, req.name, req.password, otp_code)
+        
+        # Send email in background
+        background_tasks.add_task(email_service.send_otp_email, req.email, otp_code)
+        return {"success": True, "message": "OTP sent"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Registration error: {e}")
+        import traceback
+        logger.error(f"OTP request error: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/auth/register")
+def register(req: UserRegisterRequest, background_tasks: BackgroundTasks):
+    try:
+        # Verify OTP
+        otp_doc = database.verify_and_consume_otp(req.email, req.otp)
+        if not otp_doc:
+            raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+            
+        # Register user with verified hash
+        user = database.register_verified_user(req.email, otp_doc["name"], otp_doc["password_hash"])
+        token = database.create_user_session(user["_id"])
+        
+        # Send Welcome Email
+        background_tasks.add_task(email_service.send_welcome_email, req.email, user["name"])
+        
+        return {"token": token, "user": user}
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        import traceback
+        logger.error(f"Registration error: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -142,7 +179,8 @@ def login(req: UserLoginRequest):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Login error: {e}")
+        import traceback
+        logger.error(f"Login error: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -380,10 +418,11 @@ async def follow_up(req: FollowUpRequest, current_user: dict = Depends(get_curre
             # Determine if we should generate a new visualization for the follow-up
             question_lower = req.question.lower()
             trigger_keywords = ["diagram", "visual", "sketch", "animation", "chart", "graph", "visualisation", "flowchart", "draw"]
-            has_concept_keyword = any(k in question_lower for k in visualizations.CONCEPT_DESCRIPTIONS.keys())
             has_trigger_word = any(w in question_lower for w in trigger_keywords)
+            existing_viz = s_current.get("visualization")
 
-            if has_concept_keyword or has_trigger_word or not existing_viz:
+            # Only generate a new visualization if the user explicitly asks for it
+            if has_trigger_word or not existing_viz:
                 subject = s_current["subject"]
                 context = s_current.get("context", "")
                 try:

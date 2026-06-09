@@ -4,9 +4,11 @@ from database import learning_sessions_col
 
 SUBJECTS = {
     "dsa": "Data Structures & Algorithms",
-    "dvlsi": "Digital VLSI",
-    "cs": "Control Systems",
-    "networks": "Computer Networks",
+    "c": "C Programming",
+    "python": "Python Programming",
+    "cn": "Computer Networks",
+    "physics": "Engineering Physics",
+    "chemistry": "Engineering Chemistry",
 }
 
 def create_session(subject: str, user_id: Optional[str] = None) -> str:

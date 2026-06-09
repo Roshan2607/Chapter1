@@ -242,6 +242,8 @@ export default function VisualPanel({ visualization, topic, subject, loading }: 
       if (/^\s*(sequenceDiagram|stateDiagram|classDiagram|erDiagram)/i.test(code)) {
         code = code.replace(/;+\s*$/gm, '');
       }
+      // Clean up spaces in style properties, e.g., style A fill: #F7B801 -> style A fill:#F7B801
+      code = code.replace(/^\s*style\s+.*$/gim, (line) => line.replace(/:\s+/g, ':'));
 
       return (
         <iframe

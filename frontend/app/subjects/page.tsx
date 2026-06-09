@@ -33,25 +33,25 @@ const SUBJECTS: SubjectDef[] = [
     accentBorder: "border-white/50",
   },
   {
-    key: "dvlsi",
-    name: "Digital VLSI",
-    description: "Logic gates, sequential circuits, CMOS design, timing analysis, and verification.",
-    tag: "ECE",
-    accent: "bg-neo-secondary",
-    accentText: "text-black",
-    accentBorder: "border-black/30",
+    key: "c",
+    name: "C Programming",
+    description: "Pointers, memory management, structs, file handling, and systems programming fundamentals.",
+    tag: "CSE",
+    accent: "bg-[#1E40AF]",
+    accentText: "text-white",
+    accentBorder: "border-white/50",
   },
   {
-    key: "cs",
-    name: "Control Systems",
-    description: "Feedback loops, transfer functions, stability criteria, and response analysis.",
-    tag: "ECE",
-    accent: "bg-neo-muted",
-    accentText: "text-black",
-    accentBorder: "border-black/30",
+    key: "python",
+    name: "Python Programming",
+    description: "OOP, data structures, decorators, generators, file I/O, and scripting essentials.",
+    tag: "CSE",
+    accent: "bg-[#0D9488]",
+    accentText: "text-white",
+    accentBorder: "border-white/50",
   },
   {
-    key: "networks",
+    key: "cn",
     name: "Computer Networks",
     description: "OSI layers, routing algorithms, TCP/IP stack, congestion control, and protocols.",
     tag: "CSE",
@@ -59,27 +59,51 @@ const SUBJECTS: SubjectDef[] = [
     accentText: "text-white",
     accentBorder: "border-white/30",
   },
+  {
+    key: "physics",
+    name: "Engineering Physics",
+    description: "Quantum mechanics, wave optics, semiconductors, lasers, magnetic materials, and superconductivity.",
+    tag: "Science",
+    accent: "bg-neo-secondary",
+    accentText: "text-black",
+    accentBorder: "border-black/30",
+  },
+  {
+    key: "chemistry",
+    name: "Engineering Chemistry",
+    description: "Spectroscopy, electrochemistry, corrosion, batteries, nanomaterials, polymers, and green chemistry.",
+    tag: "Science",
+    accent: "bg-neo-muted",
+    accentText: "text-black",
+    accentBorder: "border-black/30",
+  },
 ];
 
 const SUBJECT_SHADOWS: Record<string, string> = {
   dsa: "hover:shadow-[12px_12px_0px_0px_#FF6B6B]",
-  dvlsi: "hover:shadow-[12px_12px_0px_0px_#FFD93D]",
-  cs: "hover:shadow-[12px_12px_0px_0px_#C4B5FD]",
-  networks: "hover:shadow-[12px_12px_0px_0px_#000]",
+  c: "hover:shadow-[12px_12px_0px_0px_#1E40AF]",
+  python: "hover:shadow-[12px_12px_0px_0px_#0D9488]",
+  cn: "hover:shadow-[12px_12px_0px_0px_#000]",
+  physics: "hover:shadow-[12px_12px_0px_0px_#FFD93D]",
+  chemistry: "hover:shadow-[12px_12px_0px_0px_#C4B5FD]",
 };
 
 const SUBJECT_HOVER_TEXTS: Record<string, string> = {
   dsa: "group-hover:text-neo-accent",
-  dvlsi: "group-hover:text-neo-secondary",
-  cs: "group-hover:text-[#8B5CF6]",
-  networks: "group-hover:text-neutral-700",
+  c: "group-hover:text-[#1E40AF]",
+  python: "group-hover:text-[#0D9488]",
+  cn: "group-hover:text-neutral-700",
+  physics: "group-hover:text-neo-secondary",
+  chemistry: "group-hover:text-[#8B5CF6]",
 };
 
 const SUBJECT_HOVER_BG: Record<string, string> = {
   dsa: "hover:bg-neo-accent hover:text-white",
-  dvlsi: "hover:bg-neo-secondary hover:text-black",
-  cs: "hover:bg-neo-muted hover:text-black",
-  networks: "hover:bg-black hover:text-white",
+  c: "hover:bg-[#1E40AF] hover:text-white",
+  python: "hover:bg-[#0D9488] hover:text-white",
+  cn: "hover:bg-black hover:text-white",
+  physics: "hover:bg-neo-secondary hover:text-black",
+  chemistry: "hover:bg-neo-muted hover:text-black",
 };
 
 export default function SubjectsPage() {
@@ -225,7 +249,7 @@ export default function SubjectsPage() {
         )}
 
         {/* ── Subject grid ─────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
           {SUBJECTS.map((s, i) => {
             const status = indexStatus[s.key];
             const isBuilt = status?.built;

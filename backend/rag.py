@@ -5,7 +5,7 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-SUBJECTS = ["dsa", "dvlsi", "cs", "networks"]
+SUBJECTS = ["dsa", "c", "python", "cn", "physics", "chemistry"]
 DATA_DIR = Path(__file__).parent / "data"
 CHROMA_DIR = Path(__file__).parent / "chroma_db"
 
@@ -74,8 +74,16 @@ def build_index(subject: str):
         raise ValueError(f"No readable content found in PDFs for {subject}")
 
     embed_model = _get_embed_model()
-    client = _get_chroma_client()
     collection_name = _collection_name(subject)
+
+    # Force a fresh ChromaDB client to avoid stale collection UUID references
+    # (critical when running in a background thread after delete+recreate)
+    global _chroma_client
+    _chroma_client = None
+    client = _get_chroma_client()
+
+    # Clear cached index for this subject
+    _indices.pop(subject, None)
 
     # Delete existing collection to rebuild
     try:

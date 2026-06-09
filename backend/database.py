@@ -6,6 +6,7 @@ import datetime
 from typing import Optional
 from bson import ObjectId
 import pymongo
+import certifi
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -54,7 +55,8 @@ class InMemoryCollection:
         for doc in self.docs:
             match = True
             for k, v in filter_dict.items():
-                if k == "_id" and isinstance(v, ObjectId):
+                if k == "_id":
+                    # Always compare _id as strings to handle ObjectId/string mismatch
                     if str(doc.get("_id")) != str(v):
                         match = False
                         break
@@ -118,7 +120,17 @@ class InMemoryCollection:
 # ─── Database Initialization & Failsafe Fallback ──────────────────────────────
 
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
-client = pymongo.MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000, tlsAllowInvalidCertificates=True)
+
+# Use certifi CA bundle for Atlas SSL connections
+_mongo_kwargs = {
+    "serverSelectionTimeoutMS": 5000,
+}
+if "mongodb+srv" in MONGODB_URI or "mongodb.net" in MONGODB_URI:
+    _mongo_kwargs["tlsCAFile"] = certifi.where()
+else:
+    _mongo_kwargs["tlsAllowInvalidCertificates"] = True
+
+client = pymongo.MongoClient(MONGODB_URI, **_mongo_kwargs)
 db = client["chapter1_db"]
 
 use_fallback = False
@@ -138,11 +150,13 @@ if use_fallback:
     sessions_col = db_user_sessions = InMemoryCollection("user_sessions")
     learning_sessions_col = InMemoryCollection("learning_sessions")
     cached_visualizations_col = InMemoryCollection("cached_visualizations")
+    otp_codes_col = InMemoryCollection("otp_codes")
 else:
     users_col = db["users"]
     sessions_col = db["user_sessions"]
     learning_sessions_col = db["learning_sessions"]
     cached_visualizations_col = db["cached_visualizations"]
+    otp_codes_col = db["otp_codes"]
     
     # Initialize real indexes and perform database migrations
     try:
@@ -211,10 +225,30 @@ def register_user(email: str, name: str, password: str) -> dict:
     }
     
     res = users_col.insert_one(user_doc)
-    user_doc["_id"] = str(res.inserted_id)
-    # Remove password hash from returned object for safety
-    user_doc.pop("password_hash", None)
-    return user_doc
+    # Return a COPY so we don't mutate the stored doc
+    result = dict(user_doc)
+    result["_id"] = str(res.inserted_id)
+    result.pop("password_hash", None)
+    return result
+
+def register_verified_user(email: str, name: str, password_hash: str) -> dict:
+    """Register a user that has already verified their email."""
+    email_clean = email.strip().lower()
+    if users_col.find_one({"email": email_clean}):
+        raise ValueError("Email is already registered")
+
+    user_doc = {
+        "email": email_clean,
+        "name": name.strip(),
+        "password_hash": password_hash,
+        "created_at": datetime.datetime.utcnow()
+    }
+    
+    res = users_col.insert_one(user_doc)
+    result = dict(user_doc)
+    result["_id"] = str(res.inserted_id)
+    result.pop("password_hash", None)
+    return result
 
 
 def authenticate_user(email: str, password: str) -> Optional[dict]:
@@ -224,12 +258,47 @@ def authenticate_user(email: str, password: str) -> Optional[dict]:
     if not user_doc:
         return None
         
-    if verify_password(password, user_doc["password_hash"]):
-        user_doc = dict(user_doc)
-        user_doc["_id"] = str(user_doc["_id"])
-        user_doc.pop("password_hash", None)
-        return user_doc
+    if verify_password(password, user_doc.get("password_hash", "")):
+        # Return a COPY so we don't mutate the stored doc
+        result = dict(user_doc)
+        result["_id"] = str(result["_id"])
+        result.pop("password_hash", None)
+        return result
     return None
+
+# ─── OTP Registration Flow ───────────────────────────────────────────────────
+
+def store_registration_otp(email: str, name: str, password: str, otp_code: str):
+    email_clean = email.strip().lower()
+    if users_col.find_one({"email": email_clean}):
+        raise ValueError("Email is already registered")
+        
+    # Delete any existing pending OTPs for this email
+    otp_codes_col.delete_many({"email": email_clean})
+    
+    expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
+    otp_codes_col.insert_one({
+        "email": email_clean,
+        "name": name.strip(),
+        "password_hash": hash_password(password),
+        "otp": otp_code,
+        "expires_at": expires_at
+    })
+
+def verify_and_consume_otp(email: str, otp_code: str) -> Optional[dict]:
+    """Verifies the OTP. If valid, deletes the OTP doc and returns it so registration can proceed."""
+    email_clean = email.strip().lower()
+    doc = otp_codes_col.find_one({"email": email_clean, "otp": otp_code})
+    
+    if not doc:
+        return None
+        
+    if doc.get("expires_at", datetime.datetime.max) < datetime.datetime.utcnow():
+        otp_codes_col.delete_one({"_id": doc["_id"]})
+        return None
+        
+    otp_codes_col.delete_one({"_id": doc["_id"]})
+    return doc
 
 # ─── Auth Session Lifecycle ──────────────────────────────────────────────────
 
@@ -253,18 +322,26 @@ def verify_user_session(token: str) -> Optional[dict]:
     if not session_doc:
         return None
         
-    if session_doc["expires_at"] < datetime.datetime.utcnow():
+    if session_doc.get("expires_at", datetime.datetime.max) < datetime.datetime.utcnow():
         sessions_col.delete_one({"token": token})
         return None
-        
-    user_doc = users_col.find_one({"_id": ObjectId(session_doc["user_id"])})
+
+    user_id = session_doc["user_id"]
+    # Try ObjectId lookup first (real MongoDB), then string fallback (InMemory)
+    user_doc = None
+    try:
+        user_doc = users_col.find_one({"_id": ObjectId(user_id)})
+    except Exception:
+        pass
+    if not user_doc:
+        user_doc = users_col.find_one({"_id": user_id})
     if not user_doc:
         return None
         
-    user_doc = dict(user_doc)
-    user_doc["_id"] = str(user_doc["_id"])
-    user_doc.pop("password_hash", None)
-    return user_doc
+    result = dict(user_doc)
+    result["_id"] = str(result["_id"])
+    result.pop("password_hash", None)
+    return result
 
 
 def revoke_user_session(token: str) -> bool:
