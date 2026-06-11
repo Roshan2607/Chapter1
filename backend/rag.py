@@ -27,12 +27,16 @@ def _get_embed_model():
     return _embed_model
 
 
+_client_lock = threading.Lock()
+
 def _get_chroma_client():
     global _chroma_client
     if _chroma_client is None:
-        import chromadb
-        CHROMA_DIR.mkdir(exist_ok=True)
-        _chroma_client = chromadb.PersistentClient(path=str(CHROMA_DIR))
+        with _client_lock:
+            if _chroma_client is None:
+                import chromadb
+                CHROMA_DIR.mkdir(exist_ok=True)
+                _chroma_client = chromadb.PersistentClient(path=str(CHROMA_DIR))
     return _chroma_client
 
 
@@ -79,10 +83,8 @@ def build_index(subject: str):
     embed_model = _get_embed_model()
     collection_name = _collection_name(subject)
 
-    # Force a fresh ChromaDB client to avoid stale collection UUID references
-    # (critical when running in a background thread after delete+recreate)
-    global _chroma_client
-    _chroma_client = None
+    # Note: Removed the _chroma_client = None hack. Re-instantiating PersistentClient 
+    # for the same path concurrently causes RustBindingsAPI and SharedSystemClient crashes.
     client = _get_chroma_client()
 
     # Clear cached index for this subject
