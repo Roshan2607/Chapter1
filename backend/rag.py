@@ -87,32 +87,34 @@ def build_index(subject: str):
     # for the same path concurrently causes RustBindingsAPI and SharedSystemClient crashes.
     client = _get_chroma_client()
 
-    # Clear cached index for this subject
-    _indices.pop(subject, None)
+    with _get_subject_lock(subject):
+        # Clear cached index for this subject
+        _indices.pop(subject, None)
 
-    # Delete existing collection to rebuild
-    try:
-        client.delete_collection(collection_name)
-    except Exception:
-        pass
+        # Delete existing collection to rebuild
+        try:
+            client.delete_collection(collection_name)
+        except Exception:
+            pass
 
-    chroma_collection = client.get_or_create_collection(collection_name)
-    vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
-    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+        chroma_collection = client.get_or_create_collection(collection_name)
+        vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+        storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
-    splitter = SentenceSplitter(chunk_size=512, chunk_overlap=50)
-    Settings.embed_model = embed_model
-    Settings.text_splitter = splitter
-    Settings.llm = None
+        splitter = SentenceSplitter(chunk_size=512, chunk_overlap=50)
+        Settings.embed_model = embed_model
+        Settings.text_splitter = splitter
+        Settings.llm = None
 
-    index = VectorStoreIndex.from_documents(
-        documents,
-        storage_context=storage_context,
-        show_progress=True,
-    )
-    _indices[subject] = index
-    chunk_count = chroma_collection.count()
-    logger.info(f"Built index for {subject}: {chunk_count} chunks")
+        index = VectorStoreIndex.from_documents(
+            documents,
+            storage_context=storage_context,
+            show_progress=True,
+        )
+        _indices[subject] = index
+        chunk_count = chroma_collection.count()
+        logger.info(f"Built index for {subject}: {chunk_count} chunks")
+        
     return index, chunk_count
 
 
@@ -144,7 +146,7 @@ def load_index(subject: str):
 
 def _get_subject_lock(subject: str):
     if subject not in _index_locks:
-        _index_locks[subject] = threading.Lock()
+        _index_locks[subject] = threading.RLock()
     return _index_locks[subject]
 
 def get_index(subject: str):
